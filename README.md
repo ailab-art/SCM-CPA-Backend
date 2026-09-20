@@ -12,7 +12,10 @@ frontend (via the service-role key) and does three jobs:
 
 Run `supabase/add-resume-credits.sql` (or the updated `supabase/schema.sql`)
 in the Supabase SQL editor **before** deploying this — the tables and
-columns below don't exist until you do.
+columns below don't exist until you do. Also run
+`supabase/add-experience-education.sql` — it adds the `experience`/
+`education` columns that `POST /api/resume/generate` now requires to be
+filled in before it will generate anything.
 
 ## Why a separate backend at all
 
@@ -98,7 +101,7 @@ All routes except `/health` and `/api/webhooks/razorpay` require
 `Authorization: Bearer <supabase access token>` (the frontend already has
 this from `supabase.auth.getSession()`).
 
-- `POST /api/resume/generate` — body: `{ fullName, level, sapModule, yearsExperience, currentTitle, skills, summary }`. Spends 1 credit, returns `{ content, creditsRemaining }`, or `402 { code: "NO_CREDITS" }` when out of credits.
+- `POST /api/resume/generate` — body: `{ fullName, level, sapModule, yearsExperience, currentTitle, skills, summary }`. Requires the caller's profile to already have at least one real (non-blank) entry in both `experience` and `education` (see `supabase/add-experience-education.sql`) — otherwise returns `400 { code: "PROFILE_INCOMPLETE" }` before spending a credit. Otherwise spends 1 credit, returns `{ content, creditsRemaining }`, or `402 { code: "NO_CREDITS" }` when out of credits. The student's `experience`/`education` (from their profile, not the request body) are woven into the generated resume.
 - `GET /api/credits/me` — `{ creditsRemaining, creditsUsed, creditsPurchased }`.
 - `GET /api/credits/packages` — the credit packages on offer (edit `lib/razorpay.js` to change pricing).
 - `POST /api/credits/checkout` — body: `{ packageId }`. Opens a Razorpay order, returns `{ orderId, amount, currency, keyId }` for Razorpay Checkout.

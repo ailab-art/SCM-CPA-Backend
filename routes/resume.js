@@ -5,9 +5,29 @@ import { supabase } from "../lib/supabase.js";
 
 const router = Router();
 
+// A row the student added but never filled in (e.g. clicked "Add" then
+// changed their mind) doesn't count — same "has real content" rule the
+// profile page itself uses to filter out blank rows before saving.
+function hasContent(entry) {
+  return Boolean(entry) && Object.values(entry).some((v) => typeof v === "string" && v.trim());
+}
+
 router.post("/generate", requireAuth, async (req, res) => {
   if (req.profile.approval_status !== "approved") {
     return res.status(403).json({ error: "Your profile isn't approved yet — an admin needs to approve you first." });
+  }
+
+  // Required before generating (not required at sign-up — see
+  // supabase/add-experience-education.sql and the profile page). Checked
+  // against the student's saved profile, not anything the client sends in
+  // this request, so it can't be bypassed by posting fake data.
+  const experience = Array.isArray(req.profile.experience) ? req.profile.experience : [];
+  const education = Array.isArray(req.profile.education) ? req.profile.education : [];
+  if (!experience.some(hasContent) || !education.some(hasContent)) {
+    return res.status(400).json({
+      error: "Add at least one work experience entry and one education entry to your profile before generating a resume.",
+      code: "PROFILE_INCOMPLETE",
+    });
   }
 
   const { fullName, level, sapModule, yearsExperience, currentTitle, skills, summary } = req.body || {};
@@ -49,6 +69,8 @@ router.post("/generate", requireAuth, async (req, res) => {
       currentTitle,
       skills,
       summary,
+      experience: experience.filter(hasContent),
+      education: education.filter(hasContent),
     });
 
     await supabase.from("resumes").insert({
