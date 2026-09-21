@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 
 import resumeRoutes from "./routes/resume.js";
+import mockTestRoutes from "./routes/mockTest.js";
 import creditsRoutes from "./routes/credits.js";
 import webhookRoutes from "./routes/webhooks.js";
 import adminRoutes from "./routes/admin.js";
@@ -30,6 +31,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/resume", resumeRoutes);
+app.use("/api/mock-test", mockTestRoutes);
 app.use("/api/credits", creditsRoutes);
 app.use("/api/admin", adminRoutes);
 
